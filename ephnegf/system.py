@@ -87,3 +87,44 @@ def chain_phonons(omega0, n, k_dev=0.0, k_lead=0.0064, k_c=8e-4):
 
 def chain_coupling(n, M, omega0):
     return Coupling(g=np.full(n, M * np.sqrt(2 * omega0)), dof=np.arange(n))
+
+
+def from_dense_blocks(H, blocks, left, right, S=None):
+    """BlockSystem from a dense device matrix (H or K) and an explicit block partition
+    (list of index arrays, original indexing). The electrode-layer copies must be the
+    FIRST entries of blocks[0] and the LAST entries of blocks[-1]; lead couplings
+    `tau` (n_layer, n_lead) are embedded accordingly."""
+    blocks = [np.asarray(b, int) for b in blocks]
+    Hd = [H[np.ix_(b, b)] for b in blocks]
+    Hc = [H[np.ix_(blocks[i], blocks[i + 1])] for i in range(len(blocks) - 1)]
+    Sd = Sc = None
+    if S is not None:
+        Sd = [S[np.ix_(b, b)] for b in blocks]
+        Sc = [S[np.ix_(blocks[i], blocks[i + 1])] for i in range(len(blocks) - 1)]
+
+    def embed(lead, nb, at_end):
+        n = lead.tau.shape[0]
+        rows = np.zeros((nb, n))
+        if at_end:
+            rows[nb - n:] = np.eye(n)
+        else:
+            rows[:n] = np.eye(n)
+        return Lead(lead.H00, lead.H01, rows @ lead.tau, lead.S00, lead.S01,
+                    None if lead.tauS is None else rows @ lead.tauS)
+
+    sys_ = BlockSystem(Hd, Hc, embed(left, len(blocks[0]), False),
+                       embed(right, len(blocks[-1]), True), Sd, Sc)
+    sys_.order = np.concatenate(blocks)
+    return sys_
+
+
+def chain_blocks(n, size):
+    """[0], [1..size], ..., [n-1]: electrode-layer end blocks + interior blocks of `size`."""
+    inner = list(range(1, n - 1))
+    out = [np.array([0])]
+    for i in range(0, len(inner), size):
+        out.append(np.array(inner[i:i + size]))
+    if len(out) > 2 and len(out[-1]) < size and len(out) > 2:
+        out[-2] = np.concatenate([out[-2], out[-1]]); out.pop()
+    out.append(np.array([n - 1]))
+    return out

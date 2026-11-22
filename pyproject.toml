@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ephnegf"
-version = "0.4.0"
+version = "0.5.0"
 description = "Coupled electron-phonon NEGF (SCBA) with block RGF, from scratch in Python"
 readme = "README.md"
 requires-python = ">=3.9"

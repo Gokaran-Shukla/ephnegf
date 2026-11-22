@@ -9,4 +9,6 @@ from .leads import sancho_rubio, lead_selfenergy
 from .rgf import rgf_diagonal, rgf_general
 from .ballistic import transmission
 
-__version__ = "0.4.0"
+__version__ = "0.5.0"
+from .coupling import EPCoupling, from_dense, phonon_groups, eph_finite_difference
+from . import phonons, units
