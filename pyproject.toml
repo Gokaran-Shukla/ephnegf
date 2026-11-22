@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ephnegf"
+version = "0.4.0"
+description = "Coupled electron-phonon NEGF (SCBA) with block RGF, from scratch in Python"
+readme = "README.md"
+requires-python = ">=3.9"
+authors = [{ name = "Gokaran Shukla", email = "gokaran.shukla@kaust.edu.sa" }]
+dependencies = ["numpy", "scipy"]
+
+[project.optional-dependencies]
+siesta = ["sisl>=0.14"]
+plot = ["matplotlib"]
+test = ["pytest", "sisl>=0.14"]
+
+[tool.setuptools]
+packages = ["ephnegf"]

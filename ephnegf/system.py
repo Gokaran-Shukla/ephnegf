@@ -1,14 +1,17 @@
 """Block-tridiagonal descriptions of the electron and phonon subsystems + builders."""
 from dataclasses import dataclass, field
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 import numpy as np
 
 
 @dataclass
 class Lead:
-    H00: np.ndarray     # principal-layer block (H or K)
-    H01: np.ndarray     # coupling to the next layer, pointing AWAY from the device
-    tau: np.ndarray     # coupling device edge block -> first lead layer (b_edge, n_lead)
+    H00: np.ndarray            # principal-layer block (H or K)
+    H01: np.ndarray            # coupling to the next layer, pointing AWAY from the device
+    tau: np.ndarray            # coupling device edge block -> first lead layer (b_edge, n_lead)
+    S00: Optional[np.ndarray] = None   # overlaps (non-orthogonal basis); None = orthogonal
+    S01: Optional[np.ndarray] = None
+    tauS: Optional[np.ndarray] = None
 
 
 @dataclass
@@ -18,6 +21,25 @@ class BlockSystem:
     Hc: List[np.ndarray]            # upper off-diagonal blocks H_{i,i+1}
     left: Lead
     right: Lead
+    Sd: Optional[List[np.ndarray]] = None   # overlap blocks (None = orthogonal basis)
+    Sc: Optional[List[np.ndarray]] = None
+
+    @property
+    def orthogonal(self):
+        return self.Sd is None
+
+    def a_blocks(self, z):
+        """Diagonal blocks z S_ii - H_ii (no leads) and off-diagonal U_i, L_i of A = zS - H."""
+        z = np.asarray(z, complex)
+        if self.orthogonal:
+            Ad = [z[:, None, None] * np.eye(h.shape[0]) - h for h in self.Hd]
+            U = [-T for T in self.Hc]
+            L = [-T.conj().T for T in self.Hc]
+        else:
+            Ad = [z[:, None, None] * S - h for S, h in zip(self.Sd, self.Hd)]
+            U = [z[:, None, None] * S - T for S, T in zip(self.Sc, self.Hc)]
+            L = [z[:, None, None] * S.conj().T - T.conj().T for S, T in zip(self.Sc, self.Hc)]
+        return Ad, U, L
 
     @property
     def sizes(self):

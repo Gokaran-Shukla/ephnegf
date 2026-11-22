@@ -6,6 +6,7 @@ local (Holstein-type) e-ph self-energies, particle/energy-conserving SCBA.
 from .system import BlockSystem, Lead, Coupling, chain_electrons, chain_phonons, chain_coupling
 from .scba import CoupledSCBA, Settings
 from .leads import sancho_rubio, lead_selfenergy
-from .rgf import rgf_diagonal
+from .rgf import rgf_diagonal, rgf_general
+from .ballistic import transmission
 
-__version__ = "0.3.0"
+__version__ = "0.4.0"

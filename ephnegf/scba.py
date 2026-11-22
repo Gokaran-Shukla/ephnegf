@@ -13,7 +13,7 @@ from dataclasses import dataclass
 import numpy as np
 from .constants import fermi, bose, E_OVER_H_UA, EV2_OVER_HBAR_UW
 from .leads import lead_selfenergy, broadening
-from .rgf import rgf_diagonal
+from .rgf import rgf_general
 from .convolve import conv_fwd, conv_bwd, corr, kramers_kronig_real
 from .system import BlockSystem, Coupling
 
@@ -64,20 +64,20 @@ class CoupledSCBA:
         self.dof = np.asarray(cp.dof, int)
         # --- electron leads (edge blocks)
         zE = self.E + 1j * s.eta
-        self.SL = lead_selfenergy(zE, el.left.H00, el.left.H01, el.left.tau, "L")
-        self.SR = lead_selfenergy(zE, el.right.H00, el.right.H01, el.right.tau, "R")
+        self.SL = lead_selfenergy(zE, el.left)
+        self.SR = lead_selfenergy(zE, el.right)
         self.GamL, self.GamR = broadening(self.SL), broadening(self.SR)
-        self.Ad0_el = [zE[:, None, None] * np.eye(b) - H for b, H in zip(el.sizes, el.Hd)]
+        self.Ad0_el, self.U_el, self.L_el = el.a_blocks(zE)
         self.Ad0_el[0] = self.Ad0_el[0] - self.SL
         self.Ad0_el[-1] = self.Ad0_el[-1] - self.SR
         # --- phonon leads (edge blocks), w > 0 only
         wp = self.w[1:]
         zW = (wp + 1j * s.eta_ph) ** 2
         zlead = wp ** 2 + 1e-16j
-        self.PL = lead_selfenergy(zlead, ph.left.H00, ph.left.H01, ph.left.tau, "L")
-        self.PR = lead_selfenergy(zlead, ph.right.H00, ph.right.H01, ph.right.tau, "R")
+        self.PL = lead_selfenergy(zlead, ph.left)
+        self.PR = lead_selfenergy(zlead, ph.right)
         self.LamL, self.LamR = broadening(self.PL), broadening(self.PR)
-        self.Ad0_ph = [zW[:, None, None] * np.eye(b) - K for b, K in zip(ph.sizes, ph.Hd)]
+        self.Ad0_ph, self.U_ph, self.L_ph = ph.a_blocks(zW)
         self.Ad0_ph[0] = self.Ad0_ph[0] - self.PL
         self.Ad0_ph[-1] = self.Ad0_ph[-1] - self.PR
         TphL = s.T if s.T_ph_L is None else s.T_ph_L
@@ -97,7 +97,7 @@ class CoupledSCBA:
         Slb[-1] = Slb[-1] + 1j * fR * self.GamR
         Sgb[0] = Sgb[0] - 1j * (1 - fL) * self.GamL
         Sgb[-1] = Sgb[-1] - 1j * (1 - fR) * self.GamR
-        return rgf_diagonal(Ad, self.el.Hc, Slb, Sgb)
+        return rgf_general(Ad, self.U_el, self.L_el, Slb, Sgb)
 
     def phonon_greens(self, Pr, Pl, Pg):
         """Pr, Pl, Pg: (nw, n_dof) local polarisations (w = 0 row ignored)."""
@@ -109,7 +109,7 @@ class CoupledSCBA:
         Plb[-1] = Plb[-1] - 1j * self.NphR * self.LamR
         Pgb[0] = Pgb[0] - 1j * (self.NphL + 1) * self.LamL
         Pgb[-1] = Pgb[-1] - 1j * (self.NphR + 1) * self.LamR
-        DR, Dl, Dg = rgf_diagonal(Ad, self.ph.Hc, Plb, Pgb)
+        DR, Dl, Dg = rgf_general(Ad, self.U_ph, self.L_ph, Plb, Pgb)
         pad = lambda L: [np.concatenate([np.zeros((1,) + B.shape[1:], complex), B]) for B in L]
         return pad(DR), pad(Dl), pad(Dg)
 

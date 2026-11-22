@@ -107,9 +107,10 @@ def test_ballistic_phonon_chain():
     k = 0.0064
     w = np.linspace(0.005, 0.155, 300)
     z = w ** 2 + 1e-16j
-    H00, H01, tau = np.array([[2 * k]]), np.array([[-k]]), np.array([[-k]])
-    PL = lead_selfenergy(z, H00, H01, tau, "L")[:, 0, 0]
-    PR = lead_selfenergy(z, H00, H01, tau, "R")[:, 0, 0]
+    from ephnegf.system import Lead
+    lead = Lead(np.array([[2 * k]]), np.array([[-k]]), np.array([[-k]]))
+    PL = lead_selfenergy(z, lead)[:, 0, 0]
+    PR = PL
     D = 1 / (z - 2 * k - PL - PR)
     T = (-2 * PL.imag) * np.abs(D) ** 2 * (-2 * PR.imag)
     assert np.allclose(T, 1.0, atol=1e-8)
